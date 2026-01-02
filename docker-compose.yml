@@ -1,0 +1,37 @@
+services:
+  nginx:
+    restart: unless-stopped
+    container_name: ${PROJECT_NAME}_nginx
+    build:
+      context: ./src-nginx
+      args:
+        url_docker: ${URL_DOCKER_INDEX}
+    environment:
+      - NGINX_ENVSUBST_TEMPLATE_SUFFIX=.template
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+      - NGINX_STATIC_FOLDER=/datashare/static/
+      - NGINX_MEDIA_FOLDER=/datashare/media/
+      - NGINX_PORT_HTTP=${NGINX_PORT_HTTP}
+      - NGINX_PORT_HTTPS=${NGINX_PORT_HTTPS}
+    ports:
+      - "${NGINX_PORT_HTTP}:${NGINX_PORT_HTTP}"
+      - "${NGINX_PORT_HTTPS}:${NGINX_PORT_HTTPS}"
+    volumes:
+      - ./src-nginx/templates:/etc/nginx/templates
+      - datashare_static:/datashare/static
+      - datashare_media:/datashare/media
+      - nginx_cache:/var/cache/nginx
+    networks:
+      - app_net
+
+  container_registry:
+    container_name: ${PROJECT_NAME}_ctn_reg
+    restart: unless-stopped
+    image: ${URL_DOCKER_INDEX}/registry:3
+    ports:
+      - "${CTN_REGISTRY_PORT}:${CTN_REGISTRY_PORT}"
+    volumes:
+      - con_reg_data:/var/lib/registry
+    networks:
+      - app_net

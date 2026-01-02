@@ -14,13 +14,14 @@ services:
       - NGINX_MEDIA_FOLDER=/datashare/media/
       - NGINX_PORT_HTTP=${NGINX_PORT_HTTP}
       - NGINX_PORT_HTTPS=${NGINX_PORT_HTTPS}
+      - JUPYTERHUB_UI_PORT=${JUPYTERHUB_UI_PORT}
     ports:
       - "${NGINX_PORT_HTTP}:${NGINX_PORT_HTTP}"
       - "${NGINX_PORT_HTTPS}:${NGINX_PORT_HTTPS}"
     volumes:
       - ./src-nginx/templates:/etc/nginx/templates
-      - datashare_static:/datashare/static
-      - datashare_media:/datashare/media
+      - datashare:/datashare
+      - datalogs:/datalogs
       - nginx_cache:/var/cache/nginx
     networks:
       - app_net
@@ -32,6 +33,40 @@ services:
     ports:
       - "${CTN_REGISTRY_PORT}:${CTN_REGISTRY_PORT}"
     volumes:
-      - con_reg_data:/var/lib/registry
+      - data_container_registry:/var/lib/registry
     networks:
       - app_net
+
+  jupyterhub:
+    profiles:
+      - jupyter
+    restart: unless-stopped
+    container_name: ${PROJECT_NAME}_jupyterhub
+    build:
+      context: ./src-jupyterhub
+      args:
+        URL_PYPI_INDEX: ${URL_PYPI_INDEX}
+        URL_DOCKER_INDEX: ${URL_DOCKER_INDEX}
+    environment:
+      - JUPYTERHUB_PORT=${JUPYTERHUB_PORT}
+      - DATASHARE_DIR=/datashare
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - datashare:/datashare
+    entrypoint:
+      - jupyterhub
+      - -f
+      - /etc/jupyterhub/jupyterhub_config.py
+      - --port
+      - "${JUPYTERHUB_UI_PORT}"
+    networks:
+      - jf_net
+
+volumes:
+  datashare:
+  datalogs:
+  data_container_registry:
+  nginx_cache:
+
+networks:
+  app_net:
